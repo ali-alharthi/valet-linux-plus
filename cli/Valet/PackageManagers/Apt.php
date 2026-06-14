@@ -20,9 +20,6 @@ class Apt implements PackageManager
     public $serviceManager;
 
     private const PACKAGES = [
-        'redis' => 'redis-server',
-        'mysql' => 'mysql-server',
-        'mariadb' => 'mariadb-server',
     ];
 
     /**

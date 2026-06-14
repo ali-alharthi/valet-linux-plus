@@ -8,8 +8,6 @@ use Valet\Facades\Configuration;
 use Valet\Facades\DevTools;
 use Valet\Facades\DnsMasq;
 use Valet\Facades\Filesystem;
-use Valet\Facades\Mailpit;
-use Valet\Facades\Mysql;
 use Valet\Facades\Nginx;
 use Valet\Facades\Ngrok;
 use Valet\Facades\PhpFpm;
@@ -20,7 +18,6 @@ use Valet\Facades\SiteLink;
 use Valet\Facades\SiteProxy;
 use Valet\Facades\SiteSecure;
 use Valet\Facades\Valet;
-use Valet\Facades\ValetRedis;
 
 /**
  * Load correct autoloader depending on install location.
@@ -59,10 +56,7 @@ $app->command('install [--ignore-selinux] [--mariadb]', function ($ignoreSELinux
     Nginx::install();
     PhpFpm::install();
     DnsMasq::install(Configuration::get('domain'));
-    Mailpit::install();
-    ValetRedis::install();
     Nginx::restart();
-    Mysql::install($mariadb);
     Ngrok::install();
     Valet::symlinkToUsersBin();
 
@@ -98,9 +92,6 @@ if (is_dir(VALET_HOME_PATH)) {
             DnsMasq::restart();
             PhpFpm::restart();
             Nginx::restart();
-            Mailpit::restart();
-            Mysql::restart();
-            ValetRedis::restart();
             Writer::info('Valet services have been started.');
 
             return;
@@ -115,21 +106,10 @@ if (is_dir(VALET_HOME_PATH)) {
                     PhpFpm::restart();
                     break;
 
-                case 'mailpit':
-                    Mailpit::restart();
-                    break;
-
                 case 'dnsmasq':
                     DnsMasq::restart();
                     break;
 
-                case 'mysql':
-                    Mysql::restart();
-                    break;
-
-                case 'redis':
-                    ValetRedis::restart();
-                    break;
                 default:
                     break;
             }
@@ -146,9 +126,6 @@ if (is_dir(VALET_HOME_PATH)) {
             DnsMasq::restart();
             PhpFpm::restart();
             Nginx::restart();
-            Mailpit::restart();
-            Mysql::restart();
-            ValetRedis::restart();
             Writer::info('Valet services have been restarted.');
 
             return;
@@ -164,21 +141,10 @@ if (is_dir(VALET_HOME_PATH)) {
                     PhpFpm::restart();
                     break;
 
-                case 'mailpit':
-                    Mailpit::restart();
-                    break;
-
                 case 'dnsmasq':
                     DnsMasq::restart();
                     break;
 
-                case 'mysql':
-                    Mysql::restart();
-                    break;
-
-                case 'redis':
-                    ValetRedis::restart();
-                    break;
                 default:
                     break;
             }
@@ -194,9 +160,6 @@ if (is_dir(VALET_HOME_PATH)) {
         if (empty($services)) {
             PhpFpm::stop();
             Nginx::stop();
-            Mailpit::stop();
-            Mysql::stop();
-            ValetRedis::stop();
             Writer::info('Valet services have been stopped.');
 
             return;
@@ -212,17 +175,6 @@ if (is_dir(VALET_HOME_PATH)) {
                     PhpFpm::stop();
                     break;
 
-                case 'mailpit':
-                    Mailpit::stop();
-                    break;
-
-                case 'mysql':
-                    Mysql::stop();
-                    break;
-
-                case 'redis':
-                    ValetRedis::stop();
-                    break;
                 default:
                     break;
             }
@@ -238,10 +190,8 @@ if (is_dir(VALET_HOME_PATH)) {
         Nginx::uninstall();
         PhpFpm::uninstall();
         DnsMasq::uninstall();
-        Mailpit::uninstall();
         Configuration::uninstall();
         Valet::uninstall();
-
         Writer::info('Valet has been uninstalled.');
     })->descriptions('Uninstall the Valet services');
 
@@ -558,124 +508,6 @@ if (is_dir(VALET_HOME_PATH)) {
             '--ignore-ext'    => 'Installs extension with selected php version',
         ]
     );
-
-    /**
-     * List MySQL Database.
-     */
-    $app->command('db:list', function () {
-        $databases = Mysql::getDatabases();
-
-        Writer::table(['Database'], $databases);
-    })->descriptions('List all available database in MySQL/MariaDB');
-
-    /**
-     * Create new database in MySQL.
-     */
-    $app->command('db:create [databaseName]', function ($databaseName) {
-        $databaseName = $databaseName ?: basename((string)getcwd());
-
-        $isCreated = Mysql::createDatabase($databaseName);
-        if ($isCreated) {
-            Writer::info(sprintf('Database [%s] created successfully', $databaseName));
-        }
-    })->descriptions('Create new database in MySQL/MariaDB');
-
-    /**
-     * Drop database in MySQL.
-     */
-    $app->command('db:drop [databaseName] [-y|--yes]', function ($databaseName, $yes) {
-        $databaseName = $databaseName ?: basename((string)getcwd());
-
-        if (!$yes) {
-            $confirm = Writer::confirm(sprintf('Are you sure you want to delete [%s] database?', $databaseName));
-            if (!$confirm) {
-                Writer::warn('Aborted');
-
-                return;
-            }
-        }
-        $isDropped = Mysql::dropDatabase($databaseName);
-        if ($isDropped) {
-            Writer::info(sprintf('Database [%s] dropped successfully', $databaseName));
-        }
-    })->descriptions('Drop given database from MySQL/MariaDB');
-
-    /**
-     * Reset database in MySQL.
-     */
-    $app->command('db:reset [databaseName] [-y|--yes]', function ($databaseName, $yes) {
-        $databaseName = $databaseName ?: basename((string)getcwd());
-
-        if (!$yes) {
-            $confirm = Writer::confirm(sprintf('Are you sure you want to reset [%s] database?', $databaseName));
-            if (!$confirm) {
-                Writer::warn('Aborted');
-
-                return;
-            }
-        }
-        $dropDB = Mysql::dropDatabase($databaseName);
-        if (!$dropDB) {
-            Writer::warn('Error resetting database');
-
-            return;
-        }
-
-        $isCreated = Mysql::createDatabase($databaseName);
-
-        if (!$isCreated) {
-            Writer::warn('Error resetting database');
-
-            return;
-        }
-
-        Writer::info(sprintf('Database [%s] reset successfully', $databaseName));
-    })->descriptions('Clear all tables for given database in MySQL/MariaDB');
-
-    /**
-     * Import database in MySQL.
-     *
-     * @throws Exception
-     */
-    $app->command('db:import [databaseName] [dumpFile]', function ($databaseName, $dumpFile) {
-        if (!$databaseName) {
-            Writer::error('Please provide database name');
-            return;
-        }
-        if (!$dumpFile) {
-            Writer::error('Please provide a dump file path');
-            return;
-        }
-
-        if (!Filesystem::exists($dumpFile)) {
-            Writer::error(sprintf('Unable to locate [%s]', $dumpFile));
-            return;
-        }
-        Writer::info('Importing database...');
-
-        Mysql::importDatabase($dumpFile, $databaseName);
-
-        Writer::info(sprintf('Database [%s] imported successfully', $databaseName));
-    })->descriptions('Import dump file for selected database in MySQL/MariaDB');
-
-    /**
-     * Export database in MySQL.
-     */
-    $app->command('db:export [databaseName] [--sql]', function ($databaseName, $sql) {
-        Writer::info('Exporting database...');
-        $databaseName = $databaseName ?: basename((string)getcwd());
-
-        $data = Mysql::exportDatabase($databaseName, $sql);
-
-        Writer::info(sprintf("Database [%s] exported into file %s", $data['database'], $data['filename']));
-    })->descriptions('Export selected MySQL/MariaDB database');
-
-    /**
-     * Configure valet database user for MySQL/MariaDB.
-     */
-    $app->command('db:configure [--force]', function ($force) {
-        Mysql::configure($force);
-    })->descriptions('Configure valet database user for MySQL/MariaDB');
 
     /**
      * Visual Studio Code IDE Helper Command.

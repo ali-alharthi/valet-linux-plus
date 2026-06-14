@@ -22,13 +22,10 @@ class Pacman implements PackageManager
      * @var array
      */
     public const PHP_FPM_PATTERN_BY_VERSION = [
-        '8.4' => 'php-fpm'
+        '8.5' => 'php-fpm'
     ];
 
     private const PACKAGES = [
-        'redis' => 'redis',
-        'mysql' => 'mysql',
-        'mariadb' => 'mariadb',
     ];
 
     /**

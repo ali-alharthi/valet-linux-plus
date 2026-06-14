@@ -160,7 +160,7 @@ class PhpFpmTest extends TestCase
             ->once()
             ->with(
                 \sprintf(
-                    '%1$scli %1$smysql %1$sgd %1$szip %1$sxml %1$scurl %1$smbstring %1$spgsql %1$sintl %1$sposix',
+                    '%1$scli %1$sgd %1$szip %1$sxml %1$scurl %1$smbstring %1$spgsql %1$sintl %1$sposix',
                     $prefix
                 )
             );
@@ -289,7 +289,7 @@ class PhpFpmTest extends TestCase
             ->once()
             ->with(
                 \sprintf(
-                    '%1$scli %1$smysql %1$sgd %1$szip %1$sxml %1$scurl %1$smbstring %1$spgsql %1$sintl %1$sposix',
+                    '%1$scli %1$sgd %1$szip %1$sxml %1$scurl %1$smbstring %1$spgsql %1$sintl %1$sposix',
                     $prefix
                 )
             );

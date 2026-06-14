@@ -9,7 +9,6 @@ use Valet\Configuration;
 use Valet\DnsMasq;
 use Valet\Facades\Configuration as ConfigurationFacade;
 use Valet\Filesystem;
-use Valet\Mysql;
 use Valet\Nginx;
 use Valet\Ngrok;
 use Valet\PhpFpm;
@@ -261,26 +260,12 @@ class CliTest extends TestCase
     {
         return [
             [
-                'mails',
-                'http://localhost:8045',
-                true,
-                'mails.test',
-                'Valet will now proxy [https://mails.test] traffic to [http://localhost:8045]'
-            ],
-            [
                 'withtld.test',
                 'http://localhost:8045',
                 true,
                 'withtld.test',
                 'Valet will now proxy [https://withtld.test] traffic to [http://localhost:8045]'
             ],
-            [
-                'mails',
-                'http://localhost:8045',
-                false,
-                'mails.test',
-                'Valet will now proxy [http://mails.test] traffic to [http://localhost:8045]'
-            ]
         ];
     }
 
@@ -796,203 +781,18 @@ class CliTest extends TestCase
         );
     }
 
-    /**
-     * @test
-     */
-    public function itWillListDatabases(): void
-    {
-        Writer::fake();
-
-        $mysql = Mockery::mock(Mysql::class);
-        $mysql->shouldReceive('getDatabases')->withNoArgs()->andReturn([['database1'], ['database2']]);
-        swap(Mysql::class, $mysql);
-
-        $this->tester->run(['command' => 'db:list']);
-
-        $this->tester->assertCommandIsSuccessful();
-
-        /** @var BufferedOutput $output */
-        $output = Writer::output();
-
-        $content = $output->fetch();
-        $this->assertStringContainsString(
-            'database1',
-            $content
-        );
-        $this->assertStringContainsString(
-            'database2',
-            $content
-        );
-    }
-
-    public function databaseNamesProvider(): array
-    {
-        return [
-            [
-                'database1',
-                'database1',
-            ],
-            [
-                null,
-                basename((string)getcwd())
-            ]
-        ];
-    }
-
-    /**
-     * @test
-     * @dataProvider databaseNamesProvider
-     */
-    public function itWillCreateDatabase(?string $databaseName, string $expectedDatabaseName): void
-    {
-        Writer::fake();
-
-        $mysql = Mockery::mock(Mysql::class);
-        $mysql->shouldReceive('createDatabase')->with($expectedDatabaseName)->andReturnTrue();
-        swap(Mysql::class, $mysql);
-
-        $this->tester->run(['command' => 'db:create', 'databaseName' => $databaseName]);
-
-        $this->tester->assertCommandIsSuccessful();
-
-        /** @var BufferedOutput $output */
-        $output = Writer::output();
-
-        $content = $output->fetch();
-        $this->assertStringContainsString(
-            \sprintf('Database [%s] created successfully', $expectedDatabaseName),
-            $content
-        );
-    }
-
-    /**
-     * @test
-     * @dataProvider databaseNamesProvider
-     */
-    public function itWillDropDatabase(?string $databaseName, string $expectedDatabaseName): void
-    {
-        Writer::fake();
-
-        $mysql = Mockery::mock(Mysql::class);
-        $mysql->shouldReceive('dropDatabase')->with($expectedDatabaseName)->andReturnTrue();
-        swap(Mysql::class, $mysql);
-
-        $this->tester->run(['command' => 'db:drop', 'databaseName' => $databaseName, '-y' => true]);
-
-        $this->tester->assertCommandIsSuccessful();
-
-        /** @var BufferedOutput $output */
-        $output = Writer::output();
-
-        $content = $output->fetch();
-        $this->assertStringContainsString(
-            \sprintf('Database [%s] dropped successfully', $expectedDatabaseName),
-            $content
-        );
-    }
-
-    /**
-     * @test
-     * @dataProvider databaseNamesProvider
-     */
-    public function itWillResetDatabase(?string $databaseName, string $expectedDatabaseName): void
-    {
-        Writer::fake();
-
-        $mysql = Mockery::mock(Mysql::class);
-        $mysql->shouldReceive('dropDatabase')->with($expectedDatabaseName)->andReturnTrue();
-        $mysql->shouldReceive('createDatabase')->with($expectedDatabaseName)->andReturnTrue();
-        swap(Mysql::class, $mysql);
-
-        $this->tester->run(['command' => 'db:reset', 'databaseName' => $databaseName, '-y' => true]);
-
-        $this->tester->assertCommandIsSuccessful();
-
-        /** @var BufferedOutput $output */
-        $output = Writer::output();
-
-        $content = $output->fetch();
-        $this->assertStringContainsString(
-            \sprintf('Database [%s] reset successfully', $expectedDatabaseName),
-            $content
-        );
-    }
-
-    /**
-     * @test
-     */
-    public function itWillImportDatabase(): void
-    {
-        Writer::fake();
-
-        $databaseName = 'database1';
-        $dumpFilePath = '/path/to/sql-file';
-        $mysql = Mockery::mock(Mysql::class);
-        $mysql->shouldReceive('importDatabase')->with($dumpFilePath, $databaseName);
-        swap(Mysql::class, $mysql);
-
-        $fileSystem = Mockery::mock(Filesystem::class);
-        $fileSystem->shouldReceive('exists')->with($dumpFilePath)->andReturnTrue();
-        swap(Filesystem::class, $fileSystem);
-
-        $this->tester->run(['command' => 'db:import', 'databaseName' => $databaseName, 'dumpFile' => $dumpFilePath]);
-
-        $this->tester->assertCommandIsSuccessful();
-
-        /** @var BufferedOutput $output */
-        $output = Writer::output();
-
-        $content = $output->fetch();
-        $this->assertStringContainsString(
-            'Importing database...',
-            $content
-        );
-        $this->assertStringContainsString(
-            \sprintf('Database [%s] imported successfully', $databaseName),
-            $content
-        );
-    }
-
-    /**
-     * @test
-     */
-    public function itWillExportDatabase(): void
-    {
-        Writer::fake();
-
-        $databaseName = 'database1';
-        $mysql = Mockery::mock(Mysql::class);
-        $mysql->shouldReceive('exportDatabase')->with($databaseName, true)->andReturn([
-            'database' => $databaseName,
-            'filename' => 'database1.sql',
-        ]);
-        swap(Mysql::class, $mysql);
-
-        $this->tester->run(['command' => 'db:export', 'databaseName' => $databaseName, '--sql' => true]);
-
-        $this->tester->assertCommandIsSuccessful();
-
-        /** @var BufferedOutput $output */
-        $output = Writer::output();
-
-        $content = $output->fetch();
-        $this->assertStringContainsString(
-            \sprintf('Database [%s] exported into file database1.sql', $databaseName),
-            $content
-        );
-    }
 
     public function isolateDirectoryDataProvider(): array
     {
         return [
             [
-                '7.4',
+                '8.5',
                 'info.test',
                 'info.test',
                 true,
             ],
             [
-                '7.4',
+                '8.5',
                 null,
                 basename((string)getcwd()),
                 true,

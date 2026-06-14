@@ -302,11 +302,6 @@ class ConfigurationTest extends TestCase
                 null,
                 '80',
             ],
-            [
-                'mysql',
-                [],
-                [],
-            ]
         ];
     }
 
@@ -340,10 +335,6 @@ class ConfigurationTest extends TestCase
                 'paths',
                 ['test_path', 'new_path'],
             ],
-            [
-                'mysql',
-                ['user' => 'mysql', 'password' => 'password'],
-            ]
         ];
     }
 

@@ -24,9 +24,6 @@ class Eopkg implements PackageManager
     public const PHP_FPM_PATTERN_BY_VERSION = [];
 
     private const PACKAGES = [
-        'redis' => 'redis-server',
-        'mysql' => 'mysql-server',
-        'mariadb' => 'mariadb-server',
     ];
 
     /**
